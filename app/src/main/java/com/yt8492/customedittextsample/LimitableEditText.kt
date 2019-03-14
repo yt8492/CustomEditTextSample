@@ -14,7 +14,7 @@ import androidx.annotation.AttrRes
 class LimitableEditText @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    @AttrRes defStyleAttr: Int = 0
+    @AttrRes defStyleAttr: Int = android.R.attr.editTextStyle
 ) : EditText(context, attrs, defStyleAttr) {
 
     private val textSizeThresholdLength: Int
@@ -29,28 +29,39 @@ class LimitableEditText @JvmOverloads constructor(
             .also {
                 textSizeThresholdLength = it.getInteger(R.styleable.LimitableEditText_thresholdLength, -1)
                 limitTextLength = it.getInteger(R.styleable.LimitableEditText_limitLength, -1)
-                overLimitColorSpan = BackgroundColorSpan(it.getColor(R.styleable.LimitableEditText_limitBackgroundColor, Color.RED))
-                textSizeMini = it.getDimension(R.styleable.LimitableEditText_textSizeMini, resources.getDimension(R.dimen.textDefault))
-                textSizeDefault = it.getDimension(R.styleable.LimitableEditText_textSizeDefault, resources.getDimension(R.dimen.textDefault))
-        }.recycle()
+                overLimitColorSpan =
+                    BackgroundColorSpan(it.getColor(R.styleable.LimitableEditText_limitBackgroundColor, Color.RED))
+                textSizeMini = it.getDimension(
+                    R.styleable.LimitableEditText_textSizeMini,
+                    resources.getDimension(R.dimen.textDefault)
+                )
+                textSizeDefault = it.getDimension(
+                    R.styleable.LimitableEditText_textSizeDefault,
+                    resources.getDimension(R.dimen.textDefault)
+                )
+            }.recycle()
         addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 if (s == null) return
-                Spannable.Factory.getInstance().newSpannable(this@LimitableEditText.text).apply {
-                    if (s.length <= limitTextLength) {
-                        removeSpan(overLimitColorSpan)
-                        setSpan(defaultColorSpan, 0, s.length, getSpanFlags(defaultColorSpan))
-                    } else {
-                        removeSpan(defaultColorSpan)
-                        setSpan(overLimitColorSpan, limitTextLength, s.length, getSpanFlags(overLimitColorSpan))
+                if (s.getSpans(0, s.length, Any::class.java)
+                        ?.map { it::class.java.name }
+                        ?.contains(COMPOSING_TEXT_NAME) == false) {
+                    Spannable.Factory.getInstance().newSpannable(this@LimitableEditText.text).apply {
+                        if (s.length <= limitTextLength) {
+                            removeSpan(overLimitColorSpan)
+                            setSpan(defaultColorSpan, 0, s.length, getSpanFlags(defaultColorSpan))
+                        } else {
+                            removeSpan(defaultColorSpan)
+                            setSpan(overLimitColorSpan, limitTextLength, s.length, getSpanFlags(overLimitColorSpan))
+                        }
+                    }.also {
+                        val selectionStart = selectionStart
+                        val selectionEnd = selectionEnd
+                        removeTextChangedListener(this)
+                        setText(it, TextView.BufferType.SPANNABLE)
+                        setSelection(selectionStart, selectionEnd)
+                        addTextChangedListener(this)
                     }
-                }.also {
-                    val selectionStart = selectionStart
-                    val selectionEnd = selectionEnd
-                    removeTextChangedListener(this)
-                    setText(it, TextView.BufferType.SPANNABLE)
-                    setSelection(selectionStart, selectionEnd)
-                    addTextChangedListener(this)
                 }
             }
 
@@ -63,4 +74,7 @@ class LimitableEditText @JvmOverloads constructor(
 
     fun getTextLengthDiff() = limitTextLength - text.length
 
+    companion object {
+        const val COMPOSING_TEXT_NAME = "android.view.inputmethod.ComposingText"
+    }
 }
