@@ -7,14 +7,13 @@ import android.text.Spannable
 import android.text.TextWatcher
 import android.text.style.BackgroundColorSpan
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.widget.EditText
-import android.widget.TextView
-import androidx.annotation.AttrRes
 
 class LimitableEditText @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    @AttrRes defStyleAttr: Int = android.R.attr.editTextStyle
+    defStyleAttr: Int = android.R.attr.editTextStyle
 ) : EditText(context, attrs, defStyleAttr) {
 
     private val textSizeThresholdLength: Int
@@ -43,24 +42,14 @@ class LimitableEditText @JvmOverloads constructor(
         addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 if (s == null) return
-                if (s.getSpans(0, s.length, Any::class.java)
-                        ?.map { it::class.java.name }
-                        ?.contains(COMPOSING_TEXT_NAME) == false) {
-                    Spannable.Factory.getInstance().newSpannable(this@LimitableEditText.text).apply {
-                        if (s.length <= limitTextLength) {
-                            removeSpan(overLimitColorSpan)
-                            setSpan(defaultColorSpan, 0, s.length, getSpanFlags(defaultColorSpan))
-                        } else {
-                            removeSpan(defaultColorSpan)
-                            setSpan(overLimitColorSpan, limitTextLength, s.length, getSpanFlags(overLimitColorSpan))
-                        }
-                    }.also {
-                        val selectionStart = selectionStart
-                        val selectionEnd = selectionEnd
-                        removeTextChangedListener(this)
-                        setText(it, TextView.BufferType.SPANNABLE)
-                        setSelection(selectionStart, selectionEnd)
-                        addTextChangedListener(this)
+                setTextSize(TypedValue.COMPLEX_UNIT_PX, if (s.length <= textSizeThresholdLength) textSizeDefault else textSizeMini)
+                Spannable.Factory.getInstance().newSpannable(this@LimitableEditText.text).apply {
+                    if (s.length <= limitTextLength) {
+                        removeSpan(overLimitColorSpan)
+                        s.setSpan(defaultColorSpan, 0, s.length, getSpanFlags(defaultColorSpan))
+                    } else {
+                        removeSpan(defaultColorSpan)
+                        s.setSpan(overLimitColorSpan, limitTextLength, s.length, getSpanFlags(overLimitColorSpan))
                     }
                 }
             }

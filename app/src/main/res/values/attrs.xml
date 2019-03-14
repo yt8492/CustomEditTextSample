@@ -3,7 +3,7 @@
     <declare-styleable name="LimitableEditText">
         <attr name="limitBackgroundColor" format="color"/>
         <attr name="limitLength" format="integer"/>
-        <attr name="thresholdLength" format="float"/>
+        <attr name="thresholdLength" format="integer"/>
         <attr name="textSizeDefault" format="dimension"/>
         <attr name="textSizeMini" format="dimension"/>
     </declare-styleable>
